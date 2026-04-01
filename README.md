@@ -1,3 +1,13 @@
+<div align="center">
+
+![GSoC 2026](https://img.shields.io/badge/GSoC-2026-ff69b4?style=for-the-badge&logo=google&logoColor=white)
+![Open Robotics](https://img.shields.io/badge/Open%20Robotics-ROS%202-blue?style=for-the-badge&logo=ros&logoColor=white)
+![Gazebo](https://img.shields.io/badge/Gazebo-Simulation-orange?style=for-the-badge)
+![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)
+![CI](https://github.com/strangerwhoisharborofdoom/gsoc-2026-proposal/actions/workflows/ci.yml/badge.svg)
+
+</div>
+
 # Automated Benchmarking for ROS2 Systems
 
 > **GSoC 2026 Proposal** | Open Robotics Mentorship  
