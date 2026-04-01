@@ -1,129 +1,263 @@
 # Automated Benchmarking for ROS2 Systems
 
-Preparation repository for Google Summer of Code proposal with Open Robotics focused on ROS2 benchmarking and performance analysis tools.
+> **GSoC 2026 Proposal** | Open Robotics Mentorship  
+> Building standardized, automated performance benchmarking tools for distributed ROS2 systems
 
-## Overview
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![ROS2](https://img.shields.io/badge/ROS2-Humble%2FJazzy%2FRolling-blue)](https://docs.ros.org/)
+[![Language](https://img.shields.io/badge/Languages-C%2B%2B%20%7C%20Python%20%7C%20YAML-orange)]()
 
-This project aims to develop automated benchmarking and performance analysis tools for ROS2 systems. It addresses the critical need for standardized and automated performance evaluation of distributed ROS2 nodes, enabling developers to identify bottlenecks, optimize resource utilization, and ensure the reliability of ROS2-based robotic applications.
+---
 
-## Background
+## What This Project Solves
 
-### ROS2
-Robot Operating System 2 is a next-generation robotics middleware framework designed for building complex and scalable robotic systems. Key features include real-time performance, improved security, and support for diverse hardware platforms.
+ROS2 developers lack a **standardized, automated, and reproducible** benchmarking framework for evaluating distributed node performance. While several tools exist, none provide a unified solution that combines:
 
-### Gazebo
-Gazebo is a widely used robotics simulator that provides a realistic environment for testing and validating robot algorithms and systems. It offers accurate physics simulation, sensor models, and a rich set of tools for creating and managing virtual environments.
+- **Automated test execution** across multiple ROS2 distributions
+- **Cross-RMW comparison** (CycloneDDS, FastDDS, Connext)
+- **Real-time monitoring** with minimal instrumentation overhead
+- **Actionable performance reports** with bottleneck identification
+- **CI/CD integration** for regression detection
 
-## Problem Statement
+This project builds on [REP 2014](https://ros.org/reps/rep-2014.html) guidelines to deliver a production-ready benchmarking suite for the ROS2 ecosystem.
 
-Benchmarking distributed ROS2 nodes is a complex and challenging task. Current methods often rely on manual testing and ad-hoc performance measurements, which are time-consuming, error-prone, and lack standardization.
+## The Unsolved Problem in ROS2 Benchmarking
 
-The absence of a comprehensive benchmarking framework hinders the ability to:
-- Identify performance bottlenecks in distributed ROS2 nodes
-- Optimize resource utilization across different hardware platforms
-- Ensure the reliability and scalability of ROS2-based robotic applications
-- Compare different implementations of the same ROS2 components
+Despite significant progress, ROS2 still lacks a **unified benchmarking standard**. Here is what existing tools miss:
 
-Furthermore, real-time monitoring of ROS2 nodes is essential for detecting performance degradation and identifying potential issues during runtime.
+| Gap | Why It Matters |
+|-----|---------------|
+| **Fragmented tooling** | `ros2_tracing` traces but does not benchmark; `performance_test` simulates synthetic graphs but requires code modification; `ros2_benchmark` (NVIDIA) is tied to Isaac ROS workflows |
+| **No cross-RMW benchmarks** | Developers cannot easily compare CycloneDDS vs FastDDS vs Connext on the same workload |
+| **Manual baseline comparison** | No tool automatically flags performance regressions across ROS2 versions or configuration changes |
+| **Missing distributed benchmarks** | Existing tools focus on single-machine performance, not multi-node, multi-host scenarios |
+| **No standardized workload suite** | Every project defines its own benchmarks, making cross-project comparison impossible |
+| **Limited real-time analysis** | Tracing data requires offline post-processing; no real-time dashboard for live ROS2 systems |
+| **Poor CI/CD integration** | Benchmark results are not easily consumable in GitHub Actions or similar pipelines |
 
-## Proposed Solution
+This project directly addresses these gaps by building a **unified, extensible benchmarking framework** that integrates tracing, synthetic workloads, and real-time monitoring into a single toolchain.
 
-A comprehensive benchmarking framework and monitoring tools for ROS2 systems, providing a standardized and automated approach for evaluating the performance of distributed ROS2 nodes.
+## Existing Tools Comparison
 
-### Key Components
+### Tool Landscape Overview
 
-#### 1. Benchmarking Framework (C)
-- Configurable test suite for measuring key performance metrics: latency, throughput, and resource utilization
-- Support for various workload scenarios, including synthetic workloads and realistic robotic tasks
-- Automated execution of benchmark tests and generation of performance reports
-- Uses rclcpp for communication with ROS2 nodes
+| Tool | Maintainer | Primary Focus | Strengths | Limitations |
+|------|------------|---------------|-----------|-------------|
+| **[ros2_tracing](https://github.com/ros2/ros2_tracing)** | Open Robotics | Tracing & profiling | Low-overhead LTTng-based tracing; probes in ROS2 core; cross-platform | Trace-only, no benchmarking logic; requires offline analysis; no standardized metrics |
+| **[performance_test](https://github.com/irobot-ros/ros2-performance)** | iRobot / Apex.AI | Synthetic workload simulation | JSON-defined topologies; measures latency, reliability, CPU, memory | Requires code modification; C++ only; limited to synthetic graphs; not actively maintained |
+| **[ros2_benchmark](https://github.com/NVIDIA-ISAAC-ROS/ros2_benchmark)** | NVIDIA | Isaac ROS graph benchmarking | Non-intrusive; measures throughput, latency, compute; CI/CD ready | Tied to NVIDIA/Isaac ecosystem; requires rosbag inputs; limited to specific message types |
+| **[performance_test_fixture](https://github.com/ros2/performance_test_fixture)** | Open Robotics | Unit-level benchmarking | Google Benchmark integration; memory allocation stats; CMake automation | Only for micro-benchmarks of ROS2 APIs; not for full system evaluation |
+| **[ros2_framework_perf](https://discourse.openrobotics.org/t/ros-2-performance-benchmarking/44382)** | Open Robotics (internal) | Core framework profiling | Uses `perf` for profiling; identifies memory and executor bottlenecks | Internal tool; not publicly available; requires `perf` expertise |
+| **This Project** | Open Robotics (proposed) | **Unified benchmarking suite** | Combines tracing + synthetic workloads + real-time monitoring + cross-RMW + CI/CD | New project; requires adoption by community |
 
-#### 2. Monitoring Agent (Python)
-- Real-time monitoring of ROS2 nodes using system resource metrics: CPU, memory, network usage
-- Graphical visualization of performance data using dashboards
-- Integration with ROS2 logging infrastructure for capturing relevant events and diagnostics
-- Uses rclpy for communication with ROS2 nodes, and psutil for gathering system information
+### How This Project Complements Existing Tools
 
-#### 3. Web-based Dashboard (Python)
-- Graphical user interface for visualizing performance data and managing benchmark tests
-- Implemented using Flask/Django and a charting library (Plotly/Bokeh)
+- **`ros2_tracing`**: Uses it as the **underlying tracing backend** for low-overhead data collection
+- **`performance_test`**: Learns from its JSON topology approach but makes it **non-intrusive** (no code changes)
+- **`ros2_benchmark`**: Adopts its **playback + monitor architecture** but makes it **distribution-agnostic** (not NVIDIA-specific)
+- **`performance_test_fixture`**: Integrates its **memory measurement tools** for fine-grained allocation tracking
 
-#### 4. Configuration Management (YAML)
-- Test suites and benchmarking engine configuration described in YAML files
+## System Architecture
 
-#### 5. Containerization (Docker)
-- Entire system containerized for portability and reproducibility
-- Each ROS2 node, benchmarking engine, and monitoring agent runs in separate Docker containers
+```
++------------------------------------------------------------------+
+|                      ROS2 BENCHMARK SUITE                        |
++------------------------------------------------------------------+
+|                                                                  |
+|  +------------------+    +------------------+    +------------+  |
+|  |  Benchmark CLI   |    |  Web Dashboard   |    | CI/CD CLI  |  |
+|  |  (Python)        |    |  (Flask + JS)    |    | (Python)   |  |
+|  +--------+---------+    +--------+---------+    +-----+------+  |
+|           |                       |                      |       |
+|           +-----------+-----------+----------------------+       |
+|                       |                                          |
+|           +-----------v-----------+                              |
+|           |   Benchmark Controller  (Python)                     |
+|           |   - Orchestrates test execution                      |
+|           |   - Manages Docker containers                        |
+|           |   - Aggregates results                               |
+|           +-----------+-----------+                              |
+|                       |                                          |
+|         +-------------+-------------+                            |
+|         |                           |                            |
+|  +------v------+             +------v------+                     |
+|  |  Workload   |             |  Workload   |                     |
+|  |  Generator  |             |  Generator  |                     |
+|  |  (C++)      |             |  (Python)   |                     |
+|  |  - Latency  |             |  - Throughput|                    |
+|  |  - Jitter   |             |  - Load test |                    |
+|  |  - Scalability           |  - QoS test  |                     |
+|  +------+------+             +------+------+                     |
+|         |                           |                            |
+|         +-------------+-------------+                            |
+|                       |                                          |
+|           +-----------v-----------+                              |
+|           |   ROS2 Test Graph      (Nodes in Docker)            |
+|           |   - Configurable topology (YAML)                     |
+|           |   - Multi-RMW support                                |
+|           |   - Multi-host capable                               |
+|           +-----------+-----------+                              |
+|                       |                                          |
+|           +-----------v-----------+                              |
+|           |   ros2_tracing       (LTTng backend)                |
+|           |   - Low-overhead tracing                             |
+|           |   - Kernel + user-space events                       |
+|           +-----------+-----------+                              |
+|                       |                                          |
+|           +-----------v-----------+                              |
+|           |   Metrics Aggregator  (Python)                       |
+|           |   - Real-time statistics                             |
+|           |   - Bottleneck detection                             |
+|           |   - Report generation (JSON, HTML, Markdown)         |
+|           +----------------------+                               |
+|                                                                  |
++------------------------------------------------------------------+
+```
 
-#### 6. Gazebo Integration
-- Integration with Gazebo simulation to test the benchmarking framework in a realistic robotics environment
+### Component Details
 
-## Technical Architecture
+| Component | Language | Technology | Responsibility |
+|-----------|----------|------------|----------------|
+| **CLI** | Python | Click, Rich | User-facing commands for running benchmarks |
+| **Benchmark Controller** | Python | Asyncio, Docker SDK | Orchestrates test execution and container lifecycle |
+| **Workload Generator (C++)** | C++17 | rclcpp, std::chrono | High-precision latency and jitter measurement |
+| **Workload Generator (Python)** | Python | rclpy, asyncio | Throughput and scalability testing |
+| **Web Dashboard** | Python + JS | Flask, Chart.js, WebSocket | Real-time visualization of benchmark results |
+| **Metrics Aggregator** | Python | Pandas, NumPy | Statistical analysis and bottleneck detection |
+| **CI/CD CLI** | Python | GitHub Actions API | Regression detection and trend analysis |
+| **Configuration** | YAML | pyyaml | Test topology, workload parameters, thresholds |
 
-| Component | Technology | Description |
-|-----------|------------|-------------|
-| Benchmarking Engine | C + rclcpp | Executes benchmark tests, collects metrics, generates reports |
-| Monitoring Agent | Python + rclpy + psutil | Collects system resource metrics from ROS2 nodes |
-| Web Dashboard | Python + Flask/Django + Plotly | Visualizes performance data |
-| Configuration | YAML | Defines test suites and engine configuration |
-| Containerization | Docker | Ensures portability and reproducibility |
-| OS | Linux | Primary development and deployment environment |
+## How This Helps ROS2 Developers
 
-## Implementation Plan
+| Developer Need | How This Project Helps |
+|----------------|------------------------|
+| **Choosing an RMW** | Run the same benchmark against CycloneDDS, FastDDS, and Connext to pick the best for your use case |
+| **Optimizing a graph** | Identify which node or topic is the bottleneck before rewriting code |
+| **Validating hardware** | Benchmark on Jetson, Raspberry Pi, x86 to ensure your hardware meets requirements |
+| **Regression testing** | Integrate benchmarks in CI/CD to catch performance degradation on every commit |
+| **Comparing ROS2 versions** | Run identical benchmarks on Humble, Iron, Jazzy, and Rolling to evaluate upgrades |
+| **QoS tuning** | Test different QoS policies (reliability, durability, history) for optimal performance |
+| **Real-time validation** | Verify that your system meets timing requirements with statistical confidence |
+| **Documentation for stakeholders** | Generate professional HTML/Markdown reports to show performance characteristics to management |
 
-The project follows an iterative approach with clearly defined milestones:
+## Planned Contributions to the Open Robotics Ecosystem
 
-1. **Setup and Prototyping (Weeks 1-2)**
-   - Development environment setup (ROS2, Gazebo, Docker)
-   - Initial prototyping of benchmarking engine and monitoring agent
+This project is designed to contribute back to the broader ROS2 community:
 
-2. **Core Implementation (Weeks 3-8)**
-   - Benchmarking engine: test execution, metric collection
-   - Monitoring agent: system resource metrics collection
-   - Web-based dashboard: design and implementation
+### 1. Upstream Contributions
 
-3. **Integration and Testing (Weeks 9-10)**
-   - Integration of all components
-   - Testing with ROS2 applications and Gazebo
+| Contribution | Target Repository | Description |
+|--------------|------------------|-------------|
+| **Standard benchmark workload definitions** | `ros2/demos` | Common benchmark topologies (chain, star, ring) usable by all ROS2 developers |
+| **Cross-RMW benchmark scripts** | `ros2/rmw` | Automated comparison scripts for DDS implementations |
+| **CI/CD benchmark action** | `ros2/ros2` | GitHub Action for running performance benchmarks on PRs |
+| **Documentation improvements** | `ros2/docs.ros.org` | Benchmarking best practices guide based on REP 2014 |
 
-4. **Documentation and Refinement (Weeks 11-12)**
-   - Comprehensive documentation
-   - System refinement and final deliverables
+### 2. New Open-Source Packages
 
-## Deliverables
+| Package | Description | License |
+|---------|-------------|--------|
+| **ros2_benchmark_suite** | Core benchmarking framework with CLI | Apache 2.0 |
+| **ros2_benchmark_workloads** | Pre-defined workload definitions (YAML) | Apache 2.0 |
+| **ros2_benchmark_dashboard** | Web-based real-time monitoring dashboard | Apache 2.0 |
+| **ros2_benchmark_ci** | GitHub Actions integration for regression detection | Apache 2.0 |
 
-- Fully functional benchmarking framework for ROS2 systems
-- Monitoring agent for collecting system resource metrics
-- Web-based dashboard for visualizing performance data
-- Comprehensive documentation (user guides and developer manuals)
-- Example benchmark tests for common ROS2 applications
-- Detailed final report
+### 3. Community Engagement
 
-## Evaluation Criteria
+- Present findings at **ROSCon 2026**
+- Publish **benchmark comparison results** across ROS2 distributions
+- Create a **public benchmark leaderboard** for ROS2 middleware performance
+- Mentor **future contributors** to continue the project post-GSoC
 
-- **Functionality**: All features and capabilities as described
-- **Performance**: Accurate measurement with minimal overhead
-- **Usability**: Easy to use and configure
-- **Reliability**: Robust with minimal errors
-- **Scalability**: Handles large-scale ROS2 deployments
+## 12-Week Implementation Plan
 
-## Future Scope
+### Phase 1: Foundation (Weeks 1-3)
 
-- Support for more ROS2 features (DDS QoS profiles, security)
-- Integration with cloud-based monitoring services
-- Machine learning-based performance analysis
-- Support for other robotics middleware frameworks (YARP, LCM)
-- Automated optimization based on benchmarks
+| Week | Tasks | Deliverables |
+|------|-------|-------------|
+| **1** | Environment setup; study `ros2_tracing` internals; design YAML schema | Dev environment, design doc |
+| **2** | Implement basic C++ workload generator (publisher/subscriber) | `benchmark_core` prototype |
+| **3** | Implement Python workload generator; integrate with `ros2_tracing` | Working prototype with tracing |
+
+### Phase 2: Core Features (Weeks 4-7)
+
+| Week | Tasks | Deliverables |
+|------|-------|-------------|
+| **4** | Build Benchmark Controller with Docker orchestration | `benchmark_controller` module |
+| **5** | Implement metrics aggregator with latency, throughput, jitter stats | Statistics engine |
+| **6** | Add cross-RMW benchmark support (CycloneDDS, FastDDS) | Multi-RMW test runner |
+| **7** | Build CLI interface with Click; add YAML configuration parser | Functional CLI tool |
+
+### Phase 3: Visualization & Reporting (Weeks 8-10)
+
+| Week | Tasks | Deliverables |
+|------|-------|-------------|
+| **8** | Develop Flask-based web dashboard with real-time charts | Web dashboard MVP |
+| **9** | Implement report generators (JSON, HTML, Markdown) | Report generation module |
+| **10** | Add bottleneck detection algorithms; integrate with CI/CD | Smart analysis features |
+
+### Phase 4: Polish & Integration (Weeks 11-12)
+
+| Week | Tasks | Deliverables |
+|------|-------|-------------|
+| **11** | Integration testing across ROS2 distributions; bug fixes | Stable release candidate |
+| **12** | Documentation, GitHub Actions integration, final polish | Production-ready release |
+
+## Quick Start (Planned)
+
+```bash
+# Clone the repository
+git clone https://github.com/strangerwhoisharborofdoom/ros2_benchmark_suite.git
+cd ros2_benchmark_suite
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run a basic latency benchmark
+ros2-benchmark run \
+  --workload latency_chain \
+  --nodes 5 \
+  --duration 60 \
+  --rmw cyclonedds \
+  --output report.html
+
+# Compare RMWs
+ros2-benchmark compare \
+  --workload throughput_star \
+  --rmws cyclonedds,fastrtps,connext \
+  --output comparison.md
+```
+
+## Getting Involved
+
+This is a **GSoC 2026 proposal repository**. The actual implementation will be hosted under the Open Robotics organization upon selection.
+
+- **Author**: Pavan C N
+- **University**: Garden City University, Bangalore
+- **Program**: Google Summer of Code 2026
+- **Mentorship**: Open Robotics
+- **Contact**: p0073100@gmail.com
+
+### Before GSoC (Current Phase)
+
+This repository contains:
+- Project proposal and design documentation
+- Initial research and tool comparison analysis
+- Prototype development and experimentation
+
+### After GSoC Selection
+
+The production code will be migrated to:
+- **`open-robotics/ros2_benchmark_suite`** (main repository)
+- **`open-robotics/ros2_benchmark_workloads`** (workload definitions)
+- **`open-robotics/ros2_benchmark_dashboard`** (visualization)
 
 ## References
 
-- [ROS2 Documentation](https://docs.ros.org/)
-- [Gazebo Simulator](https://gazebosim.org/)
-- [Open Robotics](https://www.openrobotics.org/)
-- [Docker Documentation](https://docs.docker.com/)
-
-## Author
-
-**Pavan C N**  
-Garden City University, Bangalore  
-B.Tech Robotics Engineering
+- [REP 2014: Benchmarking performance in ROS 2](https://ros.org/reps/rep-2014.html)
+- [ros2_tracing Documentation](https://github.com/ros2/ros2_tracing)
+- [performance_test (iRobot)](https://github.com/irobot-ros/ros2-performance)
+- [ros2_benchmark (NVIDIA ISAAC ROS)](https://github.com/NVIDIA-ISAAC-ROS/ros2_benchmark)
+- [performance_test_fixture](https://github.com/ros2/performance_test_fixture)
+- [ROS 2 Performance Benchmarking Discussion](https://discourse.openrobotics.org/t/ros-2-performance-benchmarking/44382)
+- [REP 2004: Quality of Service](https://www.ros.org/reps/rep-2004.html)
